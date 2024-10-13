@@ -1,0 +1,21 @@
+services:
+  db: 
+    image: postgres:17
+    environment:
+      - POSTGRES_USER=root
+      - POSTGRES_PASSWORD=123
+      - POSTGRES_DB=db_hackernews
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - hackernews-network
+    ports:
+      - "5432:5432"
+
+networks:
+  hackernews-network:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  
