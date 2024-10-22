@@ -11,6 +11,7 @@ import { generateId } from "lucia";
 import postgres from "postgres";
 
 import { loginSchema, type SucessResponse } from "@/shared/types";
+import { loggedIn } from "@/middleware/loggedIn";
 
 export const authRouter = new Hono<Context>()
   .post("/signup", zValidator("form", loginSchema), async (c) => {
@@ -90,4 +91,13 @@ export const authRouter = new Hono<Context>()
     await lucia.invalidateSession(session.id);
     c.header("Set-Cookie", lucia.createBlankSessionCookie().serialize());
     return c.redirect("/login");
+  }).get("/user", loggedIn, async (c) => {
+    const user = c.get("user")!;
+    return c.json<SucessResponse<{ username: string}>>({
+      success: true,
+      message: "User found",
+      data: {
+        username: user.username,
+      }
+    })
   });
