@@ -4,14 +4,15 @@ import { eq } from "drizzle-orm";
 
 import { db } from "@/adapter";
 import type { Context } from "@/context";
-import { userTable } from "@/db/schema/auth";
+
 import { lucia } from "@/lucia";
+import { loggedIn } from "@/middleware/loggedIn";
 import { zValidator } from "@hono/zod-validator";
 import { generateId } from "lucia";
 import postgres from "postgres";
 
 import { loginSchema, type SucessResponse } from "@/shared/types";
-import { loggedIn } from "@/middleware/loggedIn";
+import { userTable } from "@/db/schema/auth";
 
 export const authRouter = new Hono<Context>()
   .post("/signup", zValidator("form", loginSchema), async (c) => {
@@ -25,30 +26,29 @@ export const authRouter = new Hono<Context>()
         username,
         password_hash: passwordHash,
       });
-      console.log("User created successfully");
+
       const session = await lucia.createSession(userId, { username });
-      const sessionCookie = await lucia
-        .createSessionCookie(session.id)
-        .serialize();
+      const sessionCookie = lucia.createSessionCookie(session.id).serialize();
 
       c.header("Set-Cookie", sessionCookie, { append: true });
+
       return c.json<SucessResponse>(
         {
           success: true,
-          message: "User created successfully",
+          message: "User created",
         },
         201,
       );
     } catch (error) {
-      console.log(error);
-      if (error instanceof postgres.PostgresError && error.code == "23505") {
-        throw new HTTPException(409, { message: "Username already exists" });
+      if (error instanceof postgres.PostgresError && error.code === "23505") {
+        throw new HTTPException(409, { message: "Username already used" });
       }
       throw new HTTPException(500, { message: "Failed to create user" });
     }
   })
   .post("/login", zValidator("form", loginSchema), async (c) => {
     const { username, password } = c.req.valid("form");
+
     const [existingUser] = await db
       .select()
       .from(userTable)
@@ -56,7 +56,9 @@ export const authRouter = new Hono<Context>()
       .limit(1);
 
     if (!existingUser) {
-      throw new HTTPException(404, { message: "User not found" });
+      throw new HTTPException(401, {
+        message: "Incorrect username",
+      });
     }
 
     const validPassword = await Bun.password.verify(
@@ -64,21 +66,18 @@ export const authRouter = new Hono<Context>()
       existingUser.password_hash,
     );
     if (!validPassword) {
-      throw new HTTPException(401, { message: "Invalid credentials" });
+      throw new HTTPException(401, { message: "Incorrect password" });
     }
 
-    const session = await lucia.createSession(existingUser.id, {
-      username: existingUser.username,
-    });
-    const sessionCookie = await lucia
-      .createSessionCookie(session.id)
-      .serialize();
+    const session = await lucia.createSession(existingUser.id, { username });
+    const sessionCookie = lucia.createSessionCookie(session.id).serialize();
 
     c.header("Set-Cookie", sessionCookie, { append: true });
+
     return c.json<SucessResponse>(
       {
         success: true,
-        message: "Logged in successfully",
+        message: "Logged in",
       },
       200,
     );
@@ -86,18 +85,18 @@ export const authRouter = new Hono<Context>()
   .get("/logout", async (c) => {
     const session = c.get("session");
     if (!session) {
-      return c.redirect("/login");
+      return c.redirect("/");
     }
+
     await lucia.invalidateSession(session.id);
     c.header("Set-Cookie", lucia.createBlankSessionCookie().serialize());
-    return c.redirect("/login");
-  }).get("/user", loggedIn, async (c) => {
+    return c.redirect("/");
+  })
+  .get("/user", loggedIn, async (c) => {
     const user = c.get("user")!;
-    return c.json<SucessResponse<{ username: string}>>({
+    return c.json<SucessResponse<{ username: string }>>({
       success: true,
-      message: "User found",
-      data: {
-        username: user.username,
-      }
-    })
+      message: "User fetched",
+      data: { username: user.username },
+    });
   });

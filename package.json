@@ -1,7 +1,7 @@
 {
   "name": "clone-hacker-news",
   "scripts": {
-    "dev": "bun run --hot server/index.ts",
+    "dev": "bun run --watch server/index.ts",
     "format:write": "prettier . --write",
     "format:check": "prettier . --check"
   },
@@ -9,6 +9,7 @@
     "@hono/zod-validator": "^0.4.1",
     "@lucia-auth/adapter-drizzle": "^1.1.0",
     "drizzle-orm": "^0.34.1",
+    "drizzle-zod": "^0.5.1",
     "hono": "^4.6.4",
     "lucia": "^3.2.1",
     "postgres": "^3.4.4",

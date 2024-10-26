@@ -5,10 +5,9 @@ import type { Context } from "@/context";
 
 export const loggedIn = createMiddleware<Context>(async (c, next) => {
   const user = c.get("user");
+  console.log(user);
   if (!user) {
-    throw new HTTPException(401, {
-      message: "You must be logged in to access this resource",
-    });
+    throw new HTTPException(401, { message: "Unauthorized" });
   }
   await next();
 });
