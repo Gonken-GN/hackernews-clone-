@@ -67,20 +67,20 @@ export type Post = {
 export type Comment = {
   id: number;
   userId: string;
-  postId: number;
-  parrentCommentId: number | null;
   content: string;
+  points: number;
   depth: number;
   commentCount: number;
-  points: number;
   createdAt: string;
-  commentUpvotes: {
+  postId: number;
+  parentCommentId: number | null;
+  commentUpVotes: {
     userId: string;
   }[];
   author: {
-    id: string;
     username: string;
-  }
+    id: string;
+  };
   childComments?: Comment[];
 };
 
